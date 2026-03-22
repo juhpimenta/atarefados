@@ -25,11 +25,9 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  // Rotas protegidas (requerem login)
   const protectedPaths = ['/dashboard', '/tasks', '/projects', '/clients', '/financial', '/insights', '/settings', '/onboarding']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
-  // Rotas de auth (redirecionar se já logado)
   const authPaths = ['/login', '/signup']
   const isAuth = authPaths.some(p => pathname.startsWith(p))
 
