@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Client } from '@/lib/types'
 import { fmtBRL, initials } from '@/lib/types'
+import { Users, Zap, Building2, MessageSquare, X, AlertTriangle, Rocket } from 'lucide-react'
 
 const segmentos = [
   'Alimentação e varejo', 'Saúde e bem-estar', 'Tecnologia e startups',
@@ -13,9 +14,9 @@ const origens = [
   'Abordagem direta (cold)', 'Evento / networking', 'Outro',
 ]
 const aprovLabels: Record<string, string> = {
-  rapido: '⚡ Aprova sozinho e rápido',
-  socio: '👥 Consulta sócio ou equipe',
-  comite: '🏢 Aprovação em comitê',
+  rapido: 'Aprova sozinho e rápido',
+  socio: 'Consulta sócio ou equipe',
+  comite: 'Aprovação em comitê',
 }
 
 type Props = { userId: string; initialClients: (Client & { _projects_count: number; _total_faturado: number })[] }
@@ -67,28 +68,30 @@ export default function ClientsClient({ userId, initialClients }: Props) {
   const ini = initials(nome || '?')
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>Clientes</h1>
-          <p style={{ color: 'var(--ts)', fontSize: 13 }}>{clients.length} clientes na carteira</p>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1>Clientes</h1>
+          <p>{clients.length} clientes na carteira</p>
         </div>
-        <button className="btn bp" onClick={openModal}>+ Novo cliente</button>
+        <div className="page-header-actions">
+          <button className="btn bp" onClick={openModal}>+ Novo cliente</button>
+        </div>
       </div>
 
       {/* Search */}
       <div style={{ marginBottom: 20 }}>
-        <input className="form-input" placeholder="🔍 Buscar por nome, e-mail ou segmento..." value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 400 }} />
+        <input className="form-input" placeholder="Buscar por nome, e-mail ou segmento..." value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 400 }} />
       </div>
 
       {/* Tabela */}
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">👥</div>
+          <div className="empty-state-icon"><Users size={22} color="var(--o)" strokeWidth={1.5} /></div>
           <div className="empty-state-title">{search ? 'Nenhum cliente encontrado' : 'Nenhum cliente ainda'}</div>
-          {!search && <div className="empty-state-sub">Cadastre seu primeiro cliente para começar</div>}
-          {!search && <button className="btn bp" onClick={openModal}>+ Novo cliente</button>}
+          <div className="empty-state-sub">{search ? `Tente buscar por outro termo` : 'Adicione clientes para associar a projetos e acompanhar o faturamento'}</div>
+          {!search && <button className="btn bp btn-sm" onClick={openModal}>+ Novo cliente</button>}
         </div>
       ) : (
         <div className="card">
@@ -97,10 +100,10 @@ export default function ClientsClient({ userId, initialClients }: Props) {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Segmento</th>
-                  <th>Projetos</th>
-                  <th>Faturado</th>
-                  <th>Perfil de aprovação</th>
+                  <th className="table-mobile-hide">Segmento</th>
+                  <th className="table-mobile-hide">Projetos</th>
+                  <th className="table-mobile-hide">Faturado</th>
+                  <th className="table-mobile-hide">Aprovação</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -121,12 +124,16 @@ export default function ClientsClient({ userId, initialClients }: Props) {
                         </div>
                       </div>
                     </td>
-                    <td style={{ fontSize: 13 }}>{c.segmento || '—'}</td>
-                    <td style={{ fontWeight: 600 }}>{c._projects_count}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--g)' }}>{fmtBRL(c._total_faturado)}</td>
-                    <td>
+                    <td className="table-mobile-hide" style={{ fontSize: 13 }}>{c.segmento || '—'}</td>
+                    <td className="table-mobile-hide" style={{ fontWeight: 600 }}>{c._projects_count}</td>
+                    <td className="table-mobile-hide" style={{ fontWeight: 600, color: 'var(--g)' }}>{fmtBRL(c._total_faturado)}</td>
+                    <td className="table-mobile-hide">
                       <span className={`bdg ${c.perfil_aprov === 'rapido' ? 'bdg-g' : c.perfil_aprov === 'comite' ? 'bdr' : 'bdy'}`}>
-                        {c.perfil_aprov === 'rapido' ? '⚡ Rápido' : c.perfil_aprov === 'socio' ? '👥 Sócio' : '🏢 Comitê'}
+                        {c.perfil_aprov === 'rapido'
+                          ? <><Zap size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Rápido</>
+                          : c.perfil_aprov === 'socio'
+                          ? <><Users size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Sócio</>
+                          : <><Building2 size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Comitê</>}
                       </span>
                     </td>
                     <td>
@@ -134,7 +141,9 @@ export default function ClientsClient({ userId, initialClients }: Props) {
                     </td>
                     <td>
                       {c.whatsapp && (
-                        <a href={`https://wa.me/55${c.whatsapp.replace(/\D/g,'')}`} target="_blank" className="btn bg-btn btn-sm">💬 WhatsApp</a>
+                        <a href={`https://wa.me/55${c.whatsapp.replace(/\D/g,'')}`} target="_blank" className="btn bg-btn btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <MessageSquare size={12} /> WhatsApp
+                        </a>
                       )}
                     </td>
                   </tr>
@@ -157,7 +166,7 @@ export default function ClientsClient({ userId, initialClients }: Props) {
                   <div className="modal-title">Novo cliente</div>
                   <div style={{ fontSize: 13, color: 'var(--ts)', marginTop: 2 }}>Passo 1 de 3 · Dados básicos</div>
                 </div>
-                <button className="modal-close" onClick={() => setModal(false)}>✕</button>
+                <button className="modal-close" onClick={() => setModal(false)}><X size={14} /></button>
               </div>
               <div className="modal-steps">
                 <div className="ms-item"><div className="ms-dot act">1</div><div className="ms-line" /></div>
@@ -175,7 +184,7 @@ export default function ClientsClient({ userId, initialClients }: Props) {
                 <div><label className="form-label">WhatsApp</label><input type="tel" className="form-input" placeholder="(27) 99999-0000" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></div>
                 <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Cidade / Estado</label><input className="form-input" placeholder="Ex: Vitória, ES" value={cidade} onChange={e => setCidade(e.target.value)} /></div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+              <div className="modal-footer end">
                 <button className="btn bp" onClick={() => { if (nome.trim()) setStep(2) }} disabled={!nome.trim()}>Próximo →</button>
               </div>
             </>
@@ -186,7 +195,7 @@ export default function ClientsClient({ userId, initialClients }: Props) {
             <>
               <div className="modal-header">
                 <div><div className="modal-title">Novo cliente</div><div style={{ fontSize: 13, color: 'var(--ts)', marginTop: 2 }}>Passo 2 de 3 · Perfil e segmento</div></div>
-                <button className="modal-close" onClick={() => setModal(false)}>✕</button>
+                <button className="modal-close" onClick={() => setModal(false)}><X size={14} /></button>
               </div>
               <div className="modal-steps">
                 <div className="ms-item"><div className="ms-dot done">✓</div><div className="ms-line done" /></div>
@@ -219,7 +228,7 @@ export default function ClientsClient({ userId, initialClients }: Props) {
                   {origens.map(o => <option key={o}>{o}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
+              <div className="modal-footer between">
                 <button className="btn bg-btn" onClick={() => setStep(1)}>← Voltar</button>
                 <button className="btn bp" onClick={() => setStep(3)}>Próximo →</button>
               </div>
@@ -231,7 +240,7 @@ export default function ClientsClient({ userId, initialClients }: Props) {
             <>
               <div className="modal-header">
                 <div><div className="modal-title">Novo cliente</div><div style={{ fontSize: 13, color: 'var(--ts)', marginTop: 2 }}>Passo 3 de 3 · Confirmação</div></div>
-                <button className="modal-close" onClick={() => setModal(false)}>✕</button>
+                <button className="modal-close" onClick={() => setModal(false)}><X size={14} /></button>
               </div>
               <div className="modal-steps">
                 <div className="ms-item"><div className="ms-dot done">✓</div><div className="ms-line done" /></div>
@@ -252,11 +261,12 @@ export default function ClientsClient({ userId, initialClients }: Props) {
                 </div>
               </div>
               {aprov === 'comite' && (
-                <div className="alert alert-p" style={{ marginBottom: 20 }}>
-                  ⚠️ <span style={{ fontSize: 13 }}><strong>Cliente com aprovação em comitê.</strong> Considere adicionar 30–40% de margem para cobrir retrabalho.</span>
+                <div className="alert alert-p" style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ fontSize: 13 }}><strong>Cliente com aprovação em comitê.</strong> Considere adicionar 30–40% de margem para cobrir retrabalho.</span>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+              <div className="modal-footer between">
                 <button className="btn bg-btn" onClick={() => setStep(2)}>← Corrigir</button>
                 <button className="btn bp" style={{ flex: 1, justifyContent: 'center' }} onClick={save} disabled={saving}>
                   {saving ? 'Salvando...' : '✓ Cadastrar cliente'}
@@ -268,7 +278,7 @@ export default function ClientsClient({ userId, initialClients }: Props) {
           {/* Step 4 - Sucesso */}
           {step === 4 && (
             <div className="success-screen">
-              <div className="success-icon">🚀</div>
+              <div className="success-icon"><Rocket size={48} color="var(--p)" strokeWidth={1.5} /></div>
               <div className="success-title">{nome} cadastrado!</div>
               <div className="success-sub">O cliente foi adicionado à sua carteira e já está disponível ao criar novos projetos.</div>
               <div style={{ background: 'var(--pl)', borderRadius: 'var(--rad)', padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 14 }}>

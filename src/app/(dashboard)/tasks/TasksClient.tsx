@@ -1,114 +1,107 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Task, Project } from '@/lib/types'
-import { fmtSeconds } from '@/lib/types'
+import { useTimer } from '@/lib/timer-context'
+import { useToast } from '@/lib/toast-context'
+import { useUI } from '@/lib/ui-context'
+import { Timer, Pencil, Trash2, CheckCircle2, X, RotateCcw } from 'lucide-react'
 
 type Props = { userId: string; initialTasks: Task[]; projects: Pick<Project, 'id' | 'nome' | 'etapas' | 'etapa_atual'>[] }
 
 const statusMap = { ag: 'Aguardando', an: 'Em andamento', co: 'Concluída' }
-const prioMap = { b: '🟢 Baixa', n: '🔵 Normal', a: '🔴 Alta' }
+
+function PrioDot({ prio }: { prio: string }) {
+  const color = prio === 'a' ? 'var(--r)' : prio === 'b' ? 'var(--g)' : 'var(--p)'
+  return <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+}
 
 export default function TasksClient({ userId, initialTasks, projects }: Props) {
   const supabase = createClient()
+  const timer = useTimer()
+  const { toast } = useToast()
+  const { openModal } = useUI()
+
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [filter, setFilter] = useState<'t' | 'ag' | 'an' | 'co'>('t')
-  const [showForm, setShowForm] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const mountedRef = useRef(false)
 
-  // Form state
-  const [nome, setNome] = useState('')
-  const [projectId, setProjectId] = useState('')
-  const [status, setStatus] = useState<'ag' | 'an' | 'co'>('ag')
-  const [prio, setPrio] = useState<'b' | 'n' | 'a'>('n')
-  const [etapa, setEtapa] = useState('')
-  const [horasEst, setHorasEst] = useState('')
-  const [minutosEst, setMinutosEst] = useState('')
-  const [prazo, setPrazo] = useState('')
+  // Sync when server re-fetches (navigation), but skip the first mount
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return }
+    setTasks(initialTasks)
+  }, [initialTasks])
 
-  // Timer
-  const [timerTaskId, setTimerTaskId] = useState<string | null>(null)
-  const [timerSec, setTimerSec] = useState(0)
-  const [timerRunning, setTimerRunning] = useState(false)
-  const [timerStart, setTimerStart] = useState<Date | null>(null)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [editNome, setEditNome] = useState('')
+  const [editProjectId, setEditProjectId] = useState('')
+  const [editStatus, setEditStatus] = useState<'ag' | 'an' | 'co'>('ag')
+  const [editPrio, setEditPrio] = useState<'b' | 'n' | 'a'>('n')
+  const [editEtapa, setEditEtapa] = useState('')
+  const [editHorasEst, setEditHorasEst] = useState('')
+  const [editMinutosEst, setEditMinutosEst] = useState('')
+  const [editPrazo, setEditPrazo] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
 
-  const selectedProject = projects.find(p => p.id === projectId)
-  const etapas = selectedProject?.etapas || []
-
-  async function addTask(startTimer = false) {
-    if (!nome.trim()) return
-    setSaving(true)
-    const { data, error } = await supabase.from('tasks').insert({
-      user_id: userId,
-      nome: nome.trim(),
-      project_id: projectId || null,
-      status,
-      prioridade: prio,
-      etapa: etapa || null,
-      horas_est: parseFloat(horasEst) || 0,
-      minutos_est: parseInt(minutosEst) || 0,
-      prazo: prazo || null,
-    }).select('*, project:projects(id, nome, cor)').single()
-
-    if (!error && data) {
-      setTasks(prev => [data as Task, ...prev])
-      resetForm()
-      if (startTimer) startTimerForTask(data.id)
-    }
-    setSaving(false)
+  function openEdit(task: Task) {
+    setEditingTask(task)
+    setEditNome(task.nome)
+    setEditProjectId(task.project_id || '')
+    setEditStatus(task.status)
+    setEditPrio(task.prioridade)
+    setEditEtapa(task.etapa || '')
+    setEditHorasEst(task.horas_est?.toString() || '')
+    setEditMinutosEst(task.minutos_est?.toString() || '')
+    setEditPrazo(task.prazo || '')
   }
 
-  function resetForm() {
-    setNome(''); setProjectId(''); setStatus('ag'); setPrio('n')
-    setEtapa(''); setHorasEst(''); setMinutosEst(''); setPrazo('')
-    setShowForm(false)
+  async function saveEdit() {
+    if (!editingTask || !editNome.trim()) return
+    setEditSaving(true)
+    const { data, error } = await supabase.from('tasks').update({
+      nome: editNome.trim(),
+      project_id: editProjectId || null,
+      status: editStatus,
+      prioridade: editPrio,
+      etapa: editEtapa || null,
+      horas_est: parseFloat(editHorasEst) || 0,
+      minutos_est: parseInt(editMinutosEst) || 0,
+      prazo: editPrazo || null,
+    }).eq('id', editingTask.id).select('*').single()
+
+    if (!error && data) {
+      const proj = editProjectId ? projects.find(p => p.id === editProjectId) : null
+      const updated: Task = {
+        ...data,
+        project: proj ? { id: proj.id, nome: proj.nome, cor: '' } : undefined,
+      }
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? updated : t))
+      toast('Tarefa atualizada', 'success')
+    } else {
+      toast('Erro ao salvar', 'error')
+    }
+    setEditSaving(false)
+    setEditingTask(null)
   }
 
   async function toggleTaskStatus(task: Task) {
     const newStatus = task.status === 'co' ? 'ag' : 'co'
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id)
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
+    if (newStatus === 'co') toast('Tarefa concluída!', 'success')
   }
 
   async function deleteTask(id: string) {
     if (!confirm('Excluir esta tarefa?')) return
     await supabase.from('tasks').delete().eq('id', id)
     setTasks(prev => prev.filter(t => t.id !== id))
+    toast('Tarefa excluída', 'info')
   }
 
-  function startTimerForTask(taskId: string) {
-    if (timerRef.current) clearInterval(timerRef.current)
-    setTimerTaskId(taskId)
-    setTimerSec(0)
-    setTimerRunning(true)
-    setTimerStart(new Date())
-    timerRef.current = setInterval(() => setTimerSec(s => s + 1), 1000)
+  function handleStartTimer(task: Task) {
+    timer.startTimer(task.id, task.nome, task.project_id, userId)
+    toast(`Timer iniciado: ${task.nome}`, 'success')
   }
-
-  async function stopTimer() {
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (timerSec > 0 && timerStart && timerTaskId) {
-      const task = tasks.find(t => t.id === timerTaskId)
-      await supabase.from('time_entries').insert({
-        user_id: userId,
-        task_id: timerTaskId,
-        project_id: task?.project_id || null,
-        segundos: timerSec,
-        iniciado_em: timerStart.toISOString(),
-        finalizado_em: new Date().toISOString(),
-        data: new Date().toISOString().split('T')[0],
-        descricao: task?.nome || 'Timer',
-      })
-      // Atualizar horas reais da tarefa
-      const hReal = (task?.horas_real || 0) + timerSec / 3600
-      await supabase.from('tasks').update({ horas_real: hReal }).eq('id', timerTaskId)
-      setTasks(prev => prev.map(t => t.id === timerTaskId ? { ...t, horas_real: hReal } : t))
-    }
-    setTimerRunning(false); setTimerSec(0); setTimerTaskId(null); setTimerStart(null)
-  }
-
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
 
   const filtered = filter === 't' ? tasks : tasks.filter(t => t.status === filter)
   const counts = {
@@ -118,15 +111,29 @@ export default function TasksClient({ userId, initialTasks, projects }: Props) {
     co: tasks.filter(t => t.status === 'co').length,
   }
 
+  const iconBtnStyle = {
+    background: 'none', border: '1px solid var(--b)', borderRadius: 6,
+    padding: '7px 9px', cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center',
+    color: 'var(--ts)', transition: 'all .15s', minHeight: 36,
+  }
+
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>Tarefas</h1>
-          <p style={{ color: 'var(--ts)', fontSize: 13 }}>{counts.t} tarefas · {counts.co} concluídas</p>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1>Tarefas</h1>
+          <p>{counts.t} tarefas · {counts.co} concluídas</p>
         </div>
-        <button className="btn bp" onClick={() => setShowForm(true)}>+ Nova tarefa</button>
+        <div className="page-header-actions">
+          <button className="btn bs" onClick={() => openModal('timer')}>
+            <Timer size={14} /> Iniciar timer
+          </button>
+          <button className="btn bp" onClick={() => openModal('create', task => setTasks(p => [task, ...p]))}>
+            + Nova tarefa
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -138,74 +145,7 @@ export default function TasksClient({ userId, initialTasks, projects }: Props) {
         ))}
       </div>
 
-      {/* Form nova tarefa */}
-      {showForm && (
-        <div className="card" style={{ marginBottom: 24, border: '2px solid var(--p)' }}>
-          <div className="card-body">
-            <div style={{ fontWeight: 600, marginBottom: 16 }}>Nova tarefa</div>
-            <div className="form-grid" style={{ marginBottom: 16 }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label className="form-label">Nome da tarefa *</label>
-                <input className="form-input" placeholder="Ex: Criar layout da home" value={nome} onChange={e => setNome(e.target.value)} autoFocus />
-              </div>
-              <div>
-                <label className="form-label">Projeto</label>
-                <select className="form-input" value={projectId} onChange={e => { setProjectId(e.target.value); setEtapa('') }}>
-                  <option value="">— Sem projeto —</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Status</label>
-                <select className="form-input" value={status} onChange={e => setStatus(e.target.value as typeof status)}>
-                  <option value="ag">Aguardando</option>
-                  <option value="an">Em andamento</option>
-                  <option value="co">Concluída</option>
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Prioridade</label>
-                <select className="form-input" value={prio} onChange={e => setPrio(e.target.value as typeof prio)}>
-                  <option value="b">🟢 Baixa</option>
-                  <option value="n">🔵 Normal</option>
-                  <option value="a">🔴 Alta</option>
-                </select>
-              </div>
-              {etapas.length > 0 && (
-                <div>
-                  <label className="form-label">Etapa do projeto</label>
-                  <select className="form-input" value={etapa} onChange={e => setEtapa(e.target.value)}>
-                    <option value="">— Sem etapa —</option>
-                    {etapas.map((et: string) => <option key={et} value={et}>{et}</option>)}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="form-label">Estimativa</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input className="form-input" type="number" placeholder="0h" min="0" value={horasEst} onChange={e => setHorasEst(e.target.value)} style={{ width: 80 }} />
-                  <input className="form-input" type="number" placeholder="0m" min="0" max="59" value={minutosEst} onChange={e => setMinutosEst(e.target.value)} style={{ width: 80 }} />
-                </div>
-              </div>
-              <div>
-                <label className="form-label">Prazo</label>
-                <input className="form-input" type="date" value={prazo} onChange={e => setPrazo(e.target.value)} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn bg-btn" onClick={resetForm}>Cancelar</button>
-              <button className="btn bs" onClick={() => addTask(false)} disabled={saving}>
-                {saving ? 'Salvando...' : '+ Adicionar'}
-              </button>
-              <button className="btn bp" onClick={() => addTask(true)} disabled={saving}>
-                ⏱ Adicionar e iniciar timer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lista de tarefas */}
+      {/* Lista */}
       <div className="card">
         <div className="table-wrap">
           <table>
@@ -213,12 +153,12 @@ export default function TasksClient({ userId, initialTasks, projects }: Props) {
               <tr>
                 <th style={{ width: 36 }}></th>
                 <th>Tarefa</th>
-                <th>Projeto / Etapa</th>
-                <th>Estimativa</th>
-                <th>Horas reais</th>
-                <th>Prioridade</th>
+                <th className="table-mobile-hide">Projeto / Etapa</th>
+                <th className="table-mobile-hide">Estimativa</th>
+                <th className="table-mobile-hide">Horas reais</th>
+                <th className="table-mobile-hide">Prioridade</th>
                 <th>Status</th>
-                <th>Prazo</th>
+                <th className="table-mobile-hide">Prazo</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -227,56 +167,79 @@ export default function TasksClient({ userId, initialTasks, projects }: Props) {
                 <tr>
                   <td colSpan={9}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">✅</div>
+                      <div className="empty-state-icon"><CheckCircle2 size={22} color="var(--o)" strokeWidth={1.5} /></div>
                       <div className="empty-state-title">Nenhuma tarefa aqui</div>
-                      <button className="btn bp btn-sm" onClick={() => setShowForm(true)}>Nova tarefa</button>
+                      <div className="empty-state-sub">Crie uma tarefa e inicie o timer para registrar seu tempo</div>
+                      <button className="btn bp btn-sm" onClick={() => openModal('create', task => setTasks(p => [task, ...p]))}>+ Nova tarefa</button>
                     </div>
                   </td>
                 </tr>
               )}
               {filtered.map(t => (
-                <tr key={t.id} style={{ background: t.status === 'an' ? '#fdf9ff' : '' }}>
+                <tr key={t.id} style={{ background: timer.taskId === t.id ? '#fdf9ff' : '' }}>
                   <td>
                     <input type="checkbox" checked={t.status === 'co'} onChange={() => toggleTaskStatus(t)}
                       style={{ cursor: 'pointer', accentColor: 'var(--p)', width: 16, height: 16 }} />
                   </td>
                   <td>
-                    <div style={{ fontWeight: 500, textDecoration: t.status === 'co' ? 'line-through' : 'none', color: t.status === 'co' ? 'var(--ts)' : 'inherit' }}>
+                    <div style={{
+                      fontWeight: 500,
+                      textDecoration: t.status === 'co' ? 'line-through' : 'none',
+                      color: t.status === 'co' ? 'var(--ts)' : 'inherit',
+                    }}>
                       {t.nome}
                     </div>
-                    {timerTaskId === t.id && (
-                      <div style={{ fontSize: 12, color: 'var(--o)', fontWeight: 600 }}>⏱ {fmtSeconds(timerSec)}</div>
+                    {timer.taskId === t.id && (
+                      <div style={{ fontSize: 12, color: 'var(--o)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Timer size={11} /> Rodando
+                      </div>
                     )}
                   </td>
-                  <td>
+                  <td className="table-mobile-hide">
                     {t.project ? <span className="tag">{(t.project as any).nome}</span> : '—'}
                     {t.etapa && <span style={{ fontSize: 12, color: 'var(--ts)', marginLeft: 6 }}>{t.etapa}</span>}
                   </td>
-                  <td style={{ fontSize: 13, color: 'var(--ts)' }}>
+                  <td className="table-mobile-hide" style={{ fontSize: 13, color: 'var(--ts)' }}>
                     {(t.horas_est || t.minutos_est) ? `${t.horas_est || 0}h ${t.minutos_est || 0}m` : '—'}
                   </td>
-                  <td style={{ fontSize: 13, fontWeight: 600 }}>
+                  <td className="table-mobile-hide" style={{ fontSize: 13, fontWeight: 600 }}>
                     {t.horas_real > 0 ? `${t.horas_real.toFixed(1)}h` : '—'}
                   </td>
-                  <td>{t.prioridade === 'a' ? '🔴' : t.prioridade === 'b' ? '🟢' : '🔵'}</td>
+                  <td className="table-mobile-hide"><PrioDot prio={t.prioridade} /></td>
                   <td>
                     <span className={`bdg ${t.status === 'co' ? 'bdg-g' : t.status === 'an' ? 'bdo' : 'bdgr'}`}>
                       {statusMap[t.status]}
                     </span>
                   </td>
-                  <td style={{ fontSize: 13, color: 'var(--ts)' }}>
+                  <td className="table-mobile-hide" style={{ fontSize: 13, color: 'var(--ts)' }}>
                     {t.prazo ? t.prazo.split('-').reverse().join('/') : '—'}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      {t.status !== 'co' && (
-                        timerTaskId === t.id ? (
-                          <button className="btn btn-danger btn-sm" onClick={stopTimer}>⏹ Parar</button>
-                        ) : (
-                          <button className="btn bp btn-sm" onClick={() => startTimerForTask(t.id)}>⏱</button>
-                        )
+                      {t.status !== 'co' && timer.taskId !== t.id && (
+                        <button className="btn bp btn-sm" onClick={() => handleStartTimer(t)} title="Iniciar timer">
+                          <Timer size={12} />
+                        </button>
                       )}
-                      <button className="btn bg-btn btn-sm" onClick={() => deleteTask(t.id)}>🗑</button>
+                      {t.status !== 'co' ? (
+                        <button
+                          style={{ ...iconBtnStyle, color: 'var(--g)', borderColor: 'var(--gl)' }}
+                          onClick={() => toggleTaskStatus(t)}
+                          title="Concluir tarefa"
+                        >
+                          <CheckCircle2 size={13} />
+                        </button>
+                      ) : (
+                        <button
+                          style={iconBtnStyle}
+                          onClick={() => toggleTaskStatus(t)}
+                          title="Reabrir tarefa"
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                      )}
+                      <button style={iconBtnStyle} onClick={() => openEdit(t)} title="Editar"><Pencil size={13} /></button>
+                      <button style={{ ...iconBtnStyle, color: 'var(--r)', borderColor: 'var(--rl)' }} onClick={() => deleteTask(t.id)} title="Excluir"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>
@@ -286,29 +249,72 @@ export default function TasksClient({ userId, initialTasks, projects }: Props) {
         </div>
       </div>
 
-      {/* Timer flutuante */}
-      {timerTaskId && (
-        <div style={{
-          position: 'fixed', bottom: 28, right: 28,
-          background: 'var(--p)', color: '#fff', borderRadius: 16,
-          padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14,
-          boxShadow: 'var(--shm)', zIndex: 200, minWidth: 260,
-        }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: timerRunning ? 'var(--o)' : '#ccc', flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtSeconds(timerSec)}</div>
-            <div style={{ fontSize: 11, opacity: .7, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {tasks.find(t => t.id === timerTaskId)?.nome}
+      {/* Modal editar */}
+      {editingTask && (
+        <div className="modal-bg open" onClick={e => e.target === e.currentTarget && setEditingTask(null)}>
+          <div className="modal-panel" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <div className="modal-title">Editar tarefa</div>
+              <button className="modal-close" onClick={() => setEditingTask(null)}><X size={14} /></button>
+            </div>
+            <div className="form-grid">
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Nome da tarefa *</label>
+                <input className="form-input" value={editNome} onChange={e => setEditNome(e.target.value)} autoFocus />
+              </div>
+              <div>
+                <label className="form-label">Projeto</label>
+                <select className="form-input" value={editProjectId} onChange={e => { setEditProjectId(e.target.value); setEditEtapa('') }}>
+                  <option value="">— Sem projeto —</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Status</label>
+                <select className="form-input" value={editStatus} onChange={e => setEditStatus(e.target.value as typeof editStatus)}>
+                  <option value="ag">Aguardando</option>
+                  <option value="an">Em andamento</option>
+                  <option value="co">Concluída</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Prioridade</label>
+                <select className="form-input" value={editPrio} onChange={e => setEditPrio(e.target.value as typeof editPrio)}>
+                  <option value="b">Baixa</option>
+                  <option value="n">Normal</option>
+                  <option value="a">Alta</option>
+                </select>
+              </div>
+              {(projects.find(p => p.id === editProjectId)?.etapas || []).length > 0 && (
+                <div>
+                  <label className="form-label">Etapa do projeto</label>
+                  <select className="form-input" value={editEtapa} onChange={e => setEditEtapa(e.target.value)}>
+                    <option value="">— Sem etapa —</option>
+                    {(projects.find(p => p.id === editProjectId)?.etapas || []).map((et: string) => (
+                      <option key={et} value={et}>{et}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="form-label">Estimativa</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input className="form-input" type="number" placeholder="0h" min="0" value={editHorasEst} onChange={e => setEditHorasEst(e.target.value)} style={{ width: 80 }} />
+                  <input className="form-input" type="number" placeholder="0m" min="0" max="59" value={editMinutosEst} onChange={e => setEditMinutosEst(e.target.value)} style={{ width: 80 }} />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Prazo</label>
+                <input className="form-input" type="date" value={editPrazo} onChange={e => setEditPrazo(e.target.value)} />
+              </div>
+            </div>
+            <div className="modal-footer end">
+              <button className="btn bg-btn" onClick={() => setEditingTask(null)}>Cancelar</button>
+              <button className="btn bp" onClick={saveEdit} disabled={editSaving || !editNome.trim()}>
+                {editSaving ? 'Salvando...' : '✓ Salvar alterações'}
+              </button>
             </div>
           </div>
-          <button onClick={() => timerRunning ? (clearInterval(timerRef.current!), setTimerRunning(false)) : startTimerForTask(timerTaskId)}
-            style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,.15)', color: '#fff', fontSize: 14, border: 'none', cursor: 'pointer' }}>
-            {timerRunning ? '⏸' : '▶'}
-          </button>
-          <button onClick={stopTimer}
-            style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,.15)', color: '#fff', fontSize: 14, border: 'none', cursor: 'pointer' }}>
-            ⏹
-          </button>
         </div>
       )}
     </div>

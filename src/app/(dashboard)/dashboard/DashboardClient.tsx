@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { fmtSeconds } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
+import { Pause, Play, Square } from 'lucide-react'
 
 export default function DashboardClient({ userId }: { userId: string }) {
   const [timerSec, setTimerSec] = useState(0)
@@ -25,7 +26,6 @@ export default function DashboardClient({ userId }: { userId: string }) {
   async function stop() {
     if (intervalRef.current) clearInterval(intervalRef.current)
     if (timerSec > 0 && startedAt) {
-      // Salvar entrada de tempo
       await supabase.from('time_entries').insert({
         user_id: userId,
         segundos: timerSec,
@@ -45,6 +45,13 @@ export default function DashboardClient({ userId }: { userId: string }) {
   }, [])
 
   if (timerSec === 0 && !running) return null
+
+  const btnStyle = {
+    width: 34, height: 34, borderRadius: 8,
+    background: 'rgba(255,255,255,.15)', color: '#fff',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    border: 'none', cursor: 'pointer',
+  }
 
   return (
     <div style={{
@@ -67,24 +74,12 @@ export default function DashboardClient({ userId }: { userId: string }) {
         </div>
         <div style={{ fontSize: 11, opacity: .7 }}>{running ? 'Registrando...' : 'Pausado'}</div>
       </div>
-      <button
-        onClick={running ? pause : start}
-        style={{
-          width: 34, height: 34, borderRadius: 8,
-          background: 'rgba(255,255,255,.15)', color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, border: 'none', cursor: 'pointer',
-        }}
-      >{running ? '⏸' : '▶'}</button>
-      <button
-        onClick={stop}
-        style={{
-          width: 34, height: 34, borderRadius: 8,
-          background: 'rgba(255,255,255,.15)', color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, border: 'none', cursor: 'pointer',
-        }}
-      >⏹</button>
+      <button onClick={running ? pause : start} style={btnStyle}>
+        {running ? <Pause size={14} /> : <Play size={14} />}
+      </button>
+      <button onClick={stop} style={btnStyle}>
+        <Square size={14} />
+      </button>
     </div>
   )
 }

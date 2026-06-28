@@ -1,21 +1,22 @@
 'use client'
 import { usePathname } from 'next/navigation'
+import { Bell } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 
-const pageTitles: Record<string, [string, string]> = {
-  '/dashboard':  ['Dashboard', 'Visão geral'],
-  '/tasks':      ['Tarefas', 'Gerenciar tarefas'],
-  '/projects':   ['Projetos', 'Seus projetos'],
-  '/clients':    ['Clientes', 'Carteira de clientes'],
-  '/financial':  ['Financeiro', 'Controle financeiro'],
-  '/insights':   ['Insights', 'Padrões do seu trabalho'],
-  '/settings':   ['Configurações', 'Perfil e preferências'],
+const pageTitles: Record<string, string> = {
+  '/dashboard':  'Início',
+  '/tasks':      'Tarefas',
+  '/projects':   'Projetos',
+  '/clients':    'Clientes',
+  '/financial':  'Financeiro',
+  '/insights':   'Insights',
+  '/settings':   'Configurações',
 }
 
 export default function MobileTopbar({ profile }: { profile: Profile | null }) {
   const pathname = usePathname()
   const key = Object.keys(pageTitles).find(k => pathname === k || pathname.startsWith(k + '/')) || '/dashboard'
-  const [title] = pageTitles[key] || ['Atarefados', '']
+  const title = pageTitles[key] || 'Atarefados'
 
   function openNav() {
     document.getElementById('sidebar')?.classList.add('open')
@@ -32,45 +33,57 @@ export default function MobileTopbar({ profile }: { profile: Profile | null }) {
       <style>{`
         .mobile-topbar {
           display: none; align-items: center; justify-content: space-between;
-          padding: 0 16px; height: 56px;
+          padding: 0 4px 0 8px; height: 56px;
           background: var(--p); position: sticky; top: 0; z-index: 200;
-        }
-        .desktop-topbar {
-          background: var(--s); border-bottom: 1px solid var(--b);
-          padding: 0 32px; height: 64px;
-          display: flex; align-items: center; justify-content: space-between;
-          position: sticky; top: 0; z-index: 50;
+          flex-shrink: 0;
         }
         @media (max-width: 900px) {
           .mobile-topbar { display: flex; }
-          .desktop-topbar { display: none; }
         }
       `}</style>
 
-      {/* Desktop topbar */}
-      <div className="desktop-topbar">
-        <div>
-          <div style={{ fontSize: 17, fontWeight: 600 }}>{title}</div>
-          <div style={{ fontSize: 13, color: 'var(--ts)' }}>{pageTitles[key]?.[1]}</div>
+      <div className="mobile-topbar" role="banner">
+        {/* Hamburger — 44x44 touch target */}
+        <button
+          onClick={openNav}
+          aria-label="Abrir menu lateral"
+          aria-expanded="false"
+          aria-controls="sidebar"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexDirection: 'column', gap: 5,
+            width: 44, height: 44, borderRadius: 8, flexShrink: 0,
+          }}
+        >
+          <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2 }} />
+          <span style={{ display: 'block', width: 16, height: 2, background: 'rgba(255,255,255,.7)', borderRadius: 2 }} />
+          <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2 }} />
+        </button>
+
+        {/* Page title */}
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, letterSpacing: '-.01em' }}>
+          {title}
+        </div>
+
+        {/* Right action — avatar / notifications */}
+        <div
+          style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'rgba(255,255,255,.18)', border: '1.5px solid rgba(255,255,255,.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontWeight: 700, fontSize: 14,
+            cursor: 'default', flexShrink: 0, margin: '0 4px',
+          }}
+          title={profile?.nome || 'Conta'}
+          aria-label="Conta"
+        >
+          {profile?.nome?.charAt(0).toUpperCase() || '?'}
         </div>
       </div>
 
-      {/* Mobile topbar */}
-      <div className="mobile-topbar">
-        <button
-          onClick={openNav}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 5, padding: 6 }}
-        >
-          <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2 }} />
-          <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2 }} />
-          <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2 }} />
-        </button>
-        <div style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>⚡ {title}</div>
-        <div style={{ width: 34 }} />
-      </div>
-
-      {/* Mobile overlay — fecha ao clicar */}
-      <div id="mobOv" className="mob-overlay" onClick={closeNav} />
+      {/* Mobile overlay — closes sidebar on outside click */}
+      <div id="mobOv" className="mob-overlay" onClick={closeNav} aria-hidden="true" />
     </>
   )
 }

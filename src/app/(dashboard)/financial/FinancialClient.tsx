@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { FinancialTransaction } from '@/lib/types'
 import { fmtBRL, fmtDate, formaPagLabel } from '@/lib/types'
+import { Receipt, TrendingUp, Wallet, BarChart2, ClipboardList, Landmark, CreditCard, Banknote, FileText, Zap, X, FolderOpen, User, Sparkles, CheckCircle2 } from 'lucide-react'
 
 type Props = {
   userId: string
@@ -16,11 +17,11 @@ type Props = {
 const subtiposEntrada = ['Entrada / sinal', 'Saldo final', 'Parcela', 'Avulso', 'Reembolso']
 const subtiposDespesa = ['Software/Assinatura', 'Hardware', 'Marketing', 'Educação', 'Contabilidade', 'Aluguel', 'Outros']
 const formasPag = [
-  { value: 'pix', label: '⚡ PIX' },
-  { value: 'ted', label: '🏦 TED' },
-  { value: 'cartao', label: '💳 Cartão' },
-  { value: 'dinheiro', label: '💵 Dinheiro' },
-  { value: 'boleto', label: '📄 Boleto' },
+  { value: 'pix',      label: 'PIX',     icon: Zap },
+  { value: 'ted',      label: 'TED',     icon: Landmark },
+  { value: 'cartao',   label: 'Cartão',  icon: CreditCard },
+  { value: 'dinheiro', label: 'Dinheiro',icon: Banknote },
+  { value: 'boleto',   label: 'Boleto',  icon: FileText },
 ]
 
 export default function FinancialClient({ userId, initialTransactions, projects, clients, metaMensal, mesAtual }: Props) {
@@ -32,7 +33,6 @@ export default function FinancialClient({ userId, initialTransactions, projects,
   const [filter, setFilter] = useState<'todos' | 'entrada' | 'despesa'>('todos')
   const [mesFiltro, setMesFiltro] = useState(mesAtual)
 
-  // Form
   const [projectId, setProjectId] = useState('')
   const [clientId, setClientId] = useState('')
   const [valor, setValor] = useState('')
@@ -67,16 +67,20 @@ export default function FinancialClient({ userId, initialTransactions, projects,
       descricao: descricao || (modalType === 'entrada' ? 'Recebimento' : 'Despesa'),
       notas: obs || null,
       status: 'confirmado',
-    }).select('*, project:projects(id,nome), client:clients(id,nome)').single()
+    }).select('*').single()
 
     if (!error && newT) {
-      setTransactions(prev => [newT as FinancialTransaction, ...prev])
-      setModalStep(3) // sucesso
+      const enriched = {
+        ...newT,
+        project: proj ? { id: proj.id, nome: proj.nome } : null,
+        client: cli ? { id: cli.id, nome: cli.nome } : null,
+      }
+      setTransactions(prev => [enriched as FinancialTransaction, ...prev])
+      setModalStep(3)
     }
     setSaving(false)
   }
 
-  // Métricas
   const txMes = transactions.filter(t => t.data?.startsWith(mesFiltro))
   const recebidoMes = txMes.filter(t => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0)
   const despesasMes = txMes.filter(t => t.tipo === 'despesa').reduce((s, t) => s + t.valor, 0)
@@ -87,7 +91,6 @@ export default function FinancialClient({ userId, initialTransactions, projects,
     .filter(t => filter === 'todos' || t.tipo === filter)
     .filter(t => !mesFiltro || t.data?.startsWith(mesFiltro))
 
-  // Helper mês display
   const mesesPt = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
   const [mAno, mMes] = mesFiltro.split('-')
   const mesDisplay = `${mesesPt[parseInt(mMes) - 1]} ${mAno}`
@@ -96,23 +99,23 @@ export default function FinancialClient({ userId, initialTransactions, projects,
   const cli = clients.find(c => c.id === clientId)
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>Financeiro</h1>
-          <p style={{ color: 'var(--ts)', fontSize: 13 }}>{mesDisplay}</p>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1>Financeiro</h1>
+          <p>{mesDisplay}</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn bg-btn" onClick={() => openModal('despesa')}>🧾 Despesa</button>
-          <button className="btn bp" onClick={() => openModal('entrada')}>💸 Recebimento</button>
+        <div className="page-header-actions">
+          <button className="btn bg-btn" onClick={() => openModal('despesa')}><Receipt size={15} /> Despesa</button>
+          <button className="btn bp" onClick={() => openModal('entrada')}><TrendingUp size={15} /> Recebimento</button>
         </div>
       </div>
 
       {/* Métricas */}
       <div className="metrics-grid" style={{ marginBottom: 24 }}>
         <div className="metric-card">
-          <div className="metric-label">💰 Recebido</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Wallet size={13} /> Recebido</div>
           <div className="metric-value" style={{ color: 'var(--g)', fontSize: 24 }}>{fmtBRL(recebidoMes)}</div>
           {metaMensal > 0 && (
             <>
@@ -124,28 +127,28 @@ export default function FinancialClient({ userId, initialTransactions, projects,
           )}
         </div>
         <div className="metric-card">
-          <div className="metric-label">🧾 Despesas</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Receipt size={13} /> Despesas</div>
           <div className="metric-value" style={{ color: 'var(--r)', fontSize: 24 }}>{fmtBRL(despesasMes)}</div>
         </div>
         <div className="metric-card">
-          <div className="metric-label">📊 Saldo</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BarChart2 size={13} /> Saldo</div>
           <div className="metric-value" style={{ color: saldoMes >= 0 ? 'var(--g)' : 'var(--r)', fontSize: 24 }}>{fmtBRL(saldoMes)}</div>
         </div>
         <div className="metric-card">
-          <div className="metric-label">📋 Transações</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ClipboardList size={13} /> Transações</div>
           <div className="metric-value" style={{ fontSize: 24 }}>{txMes.length}</div>
           <div style={{ fontSize: 12, color: 'var(--ts)' }}>{txMes.filter(t => t.tipo === 'entrada').length} entradas · {txMes.filter(t => t.tipo === 'despesa').length} saídas</div>
         </div>
       </div>
 
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div className="tabs" style={{ marginBottom: 0, border: 'none' }}>
+      <div className="filter-bar">
+        <div className="tabs">
           {([['todos', 'Todos'], ['entrada', 'Entradas'], ['despesa', 'Despesas']] as const).map(([v, l]) => (
             <button key={v} className={`tab-btn${filter === v ? ' active' : ''}`} onClick={() => setFilter(v)}>{l}</button>
           ))}
         </div>
-        <input type="month" className="form-input" style={{ width: 'auto', marginLeft: 'auto' }}
+        <input type="month" className="form-input form-input-month" style={{ width: 'auto', marginLeft: 'auto', minWidth: 140 }}
           value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} />
       </div>
 
@@ -153,10 +156,11 @@ export default function FinancialClient({ userId, initialTransactions, projects,
       <div className="card">
         <div className="card-body">
           {filtered.length === 0 ? (
-            <div className="empty-state" style={{ padding: '30px 0' }}>
-              <div className="empty-state-icon">💰</div>
+            <div className="empty-state">
+              <div className="empty-state-icon"><Wallet size={22} color="var(--o)" strokeWidth={1.5} /></div>
               <div className="empty-state-title">Nenhuma transação</div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
+              <div className="empty-state-sub">Registre recebimentos e despesas para acompanhar seu fluxo de caixa</div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button className="btn bg-btn btn-sm" onClick={() => openModal('despesa')}>+ Despesa</button>
                 <button className="btn bp btn-sm" onClick={() => openModal('entrada')}>+ Recebimento</button>
               </div>
@@ -164,15 +168,27 @@ export default function FinancialClient({ userId, initialTransactions, projects,
           ) : (
             filtered.map(t => (
               <div key={t.id} className="fin-row">
-                <div style={{ fontSize: 20 }}>{t.tipo === 'entrada' ? '💸' : '🧾'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 8, background: t.tipo === 'entrada' ? 'var(--gl)' : 'var(--rl)', flexShrink: 0 }}>
+                  {t.tipo === 'entrada'
+                    ? <TrendingUp size={18} color="var(--g)" />
+                    : <Receipt size={18} color="var(--r)" />}
+                </div>
                 <div className="fin-row-content">
                   <div className="fin-row-title">{t.descricao || (t.tipo === 'entrada' ? 'Recebimento' : 'Despesa')}</div>
                   <div className="fin-row-sub">
                     {t.subtipo && `${t.subtipo} · `}
                     {t.forma_pag && `${formaPagLabel[t.forma_pag] || t.forma_pag} · `}
                     {t.data ? fmtDate(t.data) : '—'}
-                    {(t as any).project?.nome && ` · 📁 ${(t as any).project.nome}`}
-                    {(t as any).client?.nome && ` · 👤 ${(t as any).client.nome}`}
+                    {(t as any).project?.nome && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        {' · '}<FolderOpen size={11} /> {(t as any).project.nome}
+                      </span>
+                    )}
+                    {(t as any).client?.nome && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        {' · '}<User size={11} /> {(t as any).client.nome}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -192,7 +208,7 @@ export default function FinancialClient({ userId, initialTransactions, projects,
       {/* Modal */}
       <div className={`modal-bg${modalType ? ' open' : ''}`} onClick={e => e.target === e.currentTarget && modalStep !== 3 && setModalType(null)}>
         <div className="modal-panel">
-          {/* Step 1 - Identificação */}
+          {/* Step 1 */}
           {modalStep === 1 && (
             <>
               <div className="modal-header">
@@ -200,7 +216,7 @@ export default function FinancialClient({ userId, initialTransactions, projects,
                   <div className="modal-title">{modalType === 'entrada' ? 'Registrar recebimento' : 'Registrar despesa'}</div>
                   <div style={{ fontSize: 13, color: 'var(--ts)', marginTop: 2 }}>Passo 1 de 2 · Identificação</div>
                 </div>
-                <button className="modal-close" onClick={() => setModalType(null)}>✕</button>
+                <button className="modal-close" onClick={() => setModalType(null)}><X size={14} /></button>
               </div>
               <div className="modal-steps">
                 <div className="ms-item"><div className="ms-dot act">1</div><div className="ms-line" /></div>
@@ -230,13 +246,13 @@ export default function FinancialClient({ userId, initialTransactions, projects,
                 <label className="form-label">Descrição (opcional)</label>
                 <input className="form-input" placeholder="Ex: 1ª parcela conforme contrato" value={descricao} onChange={e => setDescricao(e.target.value)} />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="modal-footer end">
                 <button className="btn bp" onClick={() => setModalStep(2)}>Próximo →</button>
               </div>
             </>
           )}
 
-          {/* Step 2 - Valor */}
+          {/* Step 2 */}
           {modalStep === 2 && (
             <>
               <div className="modal-header">
@@ -244,7 +260,7 @@ export default function FinancialClient({ userId, initialTransactions, projects,
                   <div className="modal-title">{modalType === 'entrada' ? 'Registrar recebimento' : 'Registrar despesa'}</div>
                   <div style={{ fontSize: 13, color: 'var(--ts)', marginTop: 2 }}>Passo 2 de 2 · Valor e pagamento</div>
                 </div>
-                <button className="modal-close" onClick={() => setModalType(null)}>✕</button>
+                <button className="modal-close" onClick={() => setModalType(null)}><X size={14} /></button>
               </div>
               <div className="modal-steps">
                 <div className="ms-item"><div className="ms-dot done">✓</div><div className="ms-line done" /></div>
@@ -260,17 +276,20 @@ export default function FinancialClient({ userId, initialTransactions, projects,
               </div>
               <div className="form-group">
                 <label className="form-label">Forma de pagamento</label>
-                <div className="radio-group" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {formasPag.map(fp => (
-                    <div key={fp.value}
-                      className={`radio-opt${formaPag === fp.value ? ' sel' : ''}`}
-                      style={{ flex: 1, minWidth: 100, padding: '10px 14px' }}
-                      onClick={() => setFormaPag(fp.value)}
-                    >
-                      <div className="radio-dot" />
-                      <div className="radio-label">{fp.label}</div>
-                    </div>
-                  ))}
+                <div className="pay-radio-group">
+                  {formasPag.map(fp => {
+                    const Icon = fp.icon
+                    return (
+                      <div key={fp.value}
+                        className={`pay-radio-opt${formaPag === fp.value ? ' sel' : ''}`}
+                        onClick={() => setFormaPag(fp.value)}
+                      >
+                        <div className="pay-radio-dot" />
+                        <Icon size={14} />
+                        {fp.label}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
               <div style={{ background: 'var(--bg)', borderRadius: 'var(--rsm)', padding: '14px 16px', marginBottom: 20, fontSize: 14 }}>
@@ -286,7 +305,7 @@ export default function FinancialClient({ userId, initialTransactions, projects,
                   </strong>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+              <div className="modal-footer between">
                 <button className="btn bg-btn" onClick={() => setModalStep(1)}>← Voltar</button>
                 <button className="btn bp" style={{ flex: 1, justifyContent: 'center' }} onClick={salvar} disabled={saving || !valor}>
                   {saving ? 'Salvando...' : '✓ Confirmar'}
@@ -298,7 +317,11 @@ export default function FinancialClient({ userId, initialTransactions, projects,
           {/* Step 3 - Sucesso */}
           {modalStep === 3 && (
             <div className="success-screen">
-              <div className="success-icon">{modalType === 'entrada' ? '🎉' : '✅'}</div>
+              <div className="success-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                {modalType === 'entrada'
+                  ? <Sparkles size={48} color="var(--g)" strokeWidth={1.5} />
+                  : <CheckCircle2 size={48} color="var(--g)" strokeWidth={1.5} />}
+              </div>
               <div className="success-title">{modalType === 'entrada' ? 'Recebimento registrado!' : 'Despesa registrada!'}</div>
               <div className="success-sub">{modalType === 'entrada' ? 'O valor foi adicionado ao seu histórico e sua meta do mês foi atualizada.' : 'A despesa foi adicionada ao seu histórico financeiro.'}</div>
               <div style={{ background: modalType === 'entrada' ? 'var(--gl)' : 'var(--rl)', border: `1px solid ${modalType === 'entrada' ? 'var(--g)' : 'var(--r)'}`, borderRadius: 'var(--rad)', padding: '16px 20px', marginBottom: 24 }}>

@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase-server'
 import { fmtBRL, fmtSeconds } from '@/lib/types'
 import Link from 'next/link'
 import DashboardClient from './DashboardClient'
+import TaskCheckbox from './TaskCheckbox'
+import { Wallet, CheckSquare, FolderOpen, Timer, TrendingUp, Receipt } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -19,7 +21,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('tasks').select('*').eq('user_id', user.id),
-    supabase.from('projects').select('*, client:clients(id, nome)').eq('user_id', user.id),
+    supabase.from('projects').select('*').eq('user_id', user.id),
     supabase.from('clients').select('*').eq('user_id', user.id),
     supabase.from('financial_transactions').select('*').eq('user_id', user.id),
     supabase.from('time_entries').select('*').eq('user_id', user.id),
@@ -59,11 +61,11 @@ export default async function DashboardPage() {
     .slice(0, 5)
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       {/* Saudação */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
-          Olá, {profile?.nome?.split(' ')[0] || 'você'} 👋
+          Olá, {profile?.nome?.split(' ')[0] || 'você'}
         </h1>
         <p style={{ color: 'var(--ts)', fontSize: 14 }}>
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -73,7 +75,7 @@ export default async function DashboardPage() {
       {/* Métricas */}
       <div className="metrics-grid">
         <div className="metric-card">
-          <div className="metric-label">💰 Recebido no mês</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Wallet size={13} /> Recebido no mês</div>
           <div className="metric-value" style={{ color: 'var(--g)' }}>{fmtBRL(recebidoMes)}</div>
           {metaMensal > 0 && (
             <>
@@ -88,19 +90,19 @@ export default async function DashboardPage() {
         </div>
 
         <div className="metric-card">
-          <div className="metric-label">✅ Tarefas</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CheckSquare size={13} /> Tarefas</div>
           <div className="metric-value">{tarefasPendentes}</div>
           <div className="metric-change">{tarefasConcluidas} concluídas este mês</div>
         </div>
 
         <div className="metric-card">
-          <div className="metric-label">📁 Projetos ativos</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><FolderOpen size={13} /> Projetos ativos</div>
           <div className="metric-value">{projetosAtivos}</div>
           <div className="metric-change">{(clients || []).length} clientes na carteira</div>
         </div>
 
         <div className="metric-card">
-          <div className="metric-label">⏱ Horas no mês</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Timer size={13} /> Horas no mês</div>
           <div className="metric-value">{Math.floor(horasMes / 3600)}h {Math.floor((horasMes % 3600) / 60)}m</div>
           <div className="metric-change">{fmtBRL(recebidoMes)} faturados</div>
         </div>
@@ -115,10 +117,11 @@ export default async function DashboardPage() {
           </div>
           <div className="card-body">
             {projetosAtivosLista.length === 0 ? (
-              <div className="empty-state" style={{ padding: '30px 0' }}>
-                <div className="empty-state-icon">📁</div>
+              <div className="empty-state">
+                <div className="empty-state-icon"><FolderOpen size={22} color="var(--o)" strokeWidth={1.5} /></div>
                 <div className="empty-state-title">Nenhum projeto ativo</div>
-                <Link href="/projects" className="btn bp btn-sm" style={{ marginTop: 8 }}>Criar projeto</Link>
+                <div className="empty-state-sub">Crie um projeto e comece a registrar seu progresso</div>
+                <Link href="/projects" className="btn bp btn-sm">+ Novo projeto</Link>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -128,10 +131,7 @@ export default async function DashboardPage() {
                   const prog = etapas.length > 1 ? (idx / (etapas.length - 1)) * 100 : 0
                   return (
                     <Link key={p.id} href={`/projects/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <div style={{ padding: '16px', border: '1px solid var(--b)', borderRadius: 'var(--rsm)', cursor: 'pointer' }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--p)')}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--b)')}
-                      >
+                      <div className="proj-card-hover" style={{ padding: '16px', border: '1px solid var(--b)', borderRadius: 'var(--rsm)', cursor: 'pointer' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                           <div style={{ fontWeight: 600, fontSize: 14 }}>{p.nome}</div>
                           <div style={{ fontSize: 12, color: 'var(--ts)' }}>{p.client?.nome || '—'}</div>
@@ -169,13 +169,18 @@ export default async function DashboardPage() {
               </div>
             </div>
             {transacoesRecentes.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--ts)', fontSize: 14 }}>
-                Nenhuma transação ainda
+              <div className="empty-state">
+                <div className="empty-state-icon"><Receipt size={22} color="var(--o)" strokeWidth={1.5} /></div>
+                <div className="empty-state-title">Sem movimentações</div>
+                <div className="empty-state-sub">Registre recebimentos e despesas para acompanhar seu fluxo</div>
+                <Link href="/financial" className="btn bp btn-sm">+ Registrar</Link>
               </div>
             ) : (
               transacoesRecentes.map(t => (
                 <div key={t.id} className="fin-row">
-                  <div style={{ fontSize: 18 }}>{t.tipo === 'entrada' ? '💸' : '🧾'}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, background: t.tipo === 'entrada' ? 'var(--gl)' : 'var(--rl)', flexShrink: 0 }}>
+                    {t.tipo === 'entrada' ? <TrendingUp size={15} color="var(--g)" /> : <Receipt size={15} color="var(--r)" />}
+                  </div>
                   <div className="fin-row-content">
                     <div className="fin-row-title">{t.descricao || (t.tipo === 'entrada' ? 'Recebimento' : 'Despesa')}</div>
                     <div className="fin-row-sub">{t.data ? t.data.split('-').reverse().join('/') : '—'}</div>
@@ -199,9 +204,10 @@ export default async function DashboardPage() {
         <div className="card-body">
           {tarefasRecentes.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">✅</div>
+              <div className="empty-state-icon"><CheckSquare size={22} color="var(--o)" strokeWidth={1.5} /></div>
               <div className="empty-state-title">Nenhuma tarefa ainda</div>
-              <Link href="/tasks" className="btn bp btn-sm">Criar tarefa</Link>
+              <div className="empty-state-sub">Adicione tarefas e use o timer para registrar seu tempo</div>
+              <Link href="/tasks" className="btn bp btn-sm">+ Nova tarefa</Link>
             </div>
           ) : (
             <div className="table-wrap">
@@ -219,7 +225,7 @@ export default async function DashboardPage() {
                   {tarefasRecentes.map(t => (
                     <tr key={t.id}>
                       <td>
-                        <TaskCheckbox taskId={t.id} checked={t.status === 'co'} />
+                        <TaskCheckbox taskId={t.id} initialChecked={t.status === 'co'} />
                       </td>
                       <td style={{ fontWeight: 500, textDecoration: t.status === 'co' ? 'line-through' : 'none', color: t.status === 'co' ? 'var(--ts)' : 'inherit' }}>
                         {t.nome}
@@ -230,7 +236,9 @@ export default async function DashboardPage() {
                           {t.status === 'co' ? 'Concluída' : t.status === 'an' ? 'Em andamento' : 'Aguardando'}
                         </span>
                       </td>
-                      <td style={{ fontSize: 16 }}>{t.prioridade === 'a' ? '🔴' : t.prioridade === 'b' ? '🟢' : '🔵'}</td>
+                      <td>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: t.prioridade === 'a' ? 'var(--r)' : t.prioridade === 'b' ? 'var(--g)' : 'var(--p)' }} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -245,13 +253,3 @@ export default async function DashboardPage() {
   )
 }
 
-// Mini client component para checkbox interativo
-function TaskCheckbox({ taskId, checked }: { taskId: string; checked: boolean }) {
-  return (
-    <input
-      type="checkbox"
-      defaultChecked={checked}
-      style={{ cursor: 'pointer', accentColor: 'var(--p)', width: 16, height: 16 }}
-    />
-  )
-}

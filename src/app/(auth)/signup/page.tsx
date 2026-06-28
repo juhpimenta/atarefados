@@ -18,7 +18,7 @@ export default function SignupPage() {
     e.preventDefault()
     if (senha.length < 6) { setErro('Senha deve ter ao menos 6 caracteres.'); return }
     setLoading(true); setErro('')
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password: senha,
       options: { data: { nome } },
@@ -30,9 +30,14 @@ export default function SignupPage() {
       setLoading(false)
       return
     }
-    // Redirecionar para onboarding
-    router.push('/onboarding')
-    router.refresh()
+    if (data.session) {
+      router.push('/onboarding')
+      router.refresh()
+    } else {
+      // Supabase requer confirmação de e-mail
+      setSucesso(true)
+      setLoading(false)
+    }
   }
 
   if (sucesso) return (

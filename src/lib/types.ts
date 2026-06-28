@@ -54,6 +54,13 @@ export type Project = {
   etapa_atual: string
   etapas: string[]
   cor: string
+  // campos de estimativa inteligente
+  natureza: string | null
+  tipo_projeto: string | null
+  complexidade: 'simples' | 'medio' | 'complexo' | null
+  info_extra: string | null
+  horas_est_origem: 'historico' | 'ia' | 'hibrida' | 'manual' | null
+  horas_est_expl: string | null
   created_at: string
   updated_at: string
   // joined

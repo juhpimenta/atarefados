@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CheckSquare, FolderOpen, Users, Wallet, Lightbulb, Timer, Zap } from 'lucide-react'
 
 export default function LandingPage() {
   return (
@@ -12,8 +13,7 @@ export default function LandingPage() {
           <div style={{
             width: 36, height: 36, background: 'var(--p)', borderRadius: 10,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 18,
-          }}>⚡</div>
+          }}><Zap size={18} color="#fff" /></div>
           Atarefados
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -55,26 +55,29 @@ export default function LandingPage() {
         padding: '60px 48px', maxWidth: 1100, margin: '0 auto',
       }}>
         {[
-          { icon: '✅', title: 'Tarefas com Timer', desc: 'Organize suas tarefas por projeto e inicie o cronômetro com um clique. Registre horas automaticamente.' },
-          { icon: '📁', title: 'Projetos por etapas', desc: 'Briefing → Criação → Revisão → Aprovação → Entrega. Visualize o progresso de cada projeto.' },
-          { icon: '👥', title: 'Gestão de clientes', desc: 'Perfil de aprovação, segmento e histórico de cada cliente. Saiba com quem você está trabalhando.' },
-          { icon: '💰', title: 'Controle financeiro', desc: 'Registre recebimentos e despesas, acompanhe a meta mensal e visualize o fluxo de caixa.' },
-          { icon: '💡', title: 'Insights inteligentes', desc: 'Descubra quais projetos são mais rentáveis, seus horários de pico e onde melhorar a precificação.' },
-          { icon: '⏱', title: 'Controle de horas', desc: 'Compare horas estimadas com realizadas. Pare de perder dinheiro com projetos sem controle de tempo.' },
-        ].map((f, i) => (
-          <div key={i} style={{
-            background: 'var(--bg)', border: '1px solid var(--b)',
-            borderRadius: 'var(--rad)', padding: 28,
-          }}>
-            <div style={{
-              width: 44, height: 44, background: 'var(--pl)', borderRadius: 10,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: 16, fontSize: 20,
-            }}>{f.icon}</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{f.title}</h3>
-            <p style={{ fontSize: 14, color: 'var(--ts)', lineHeight: 1.6 }}>{f.desc}</p>
-          </div>
-        ))}
+          { icon: CheckSquare, title: 'Tarefas com Timer', desc: 'Organize suas tarefas por projeto e inicie o cronômetro com um clique. Registre horas automaticamente.' },
+          { icon: FolderOpen,  title: 'Projetos por etapas', desc: 'Briefing → Criação → Revisão → Aprovação → Entrega. Visualize o progresso de cada projeto.' },
+          { icon: Users,       title: 'Gestão de clientes', desc: 'Perfil de aprovação, segmento e histórico de cada cliente. Saiba com quem você está trabalhando.' },
+          { icon: Wallet,      title: 'Controle financeiro', desc: 'Registre recebimentos e despesas, acompanhe a meta mensal e visualize o fluxo de caixa.' },
+          { icon: Lightbulb,   title: 'Insights inteligentes', desc: 'Descubra quais projetos são mais rentáveis, seus horários de pico e onde melhorar a precificação.' },
+          { icon: Timer,       title: 'Controle de horas', desc: 'Compare horas estimadas com realizadas. Pare de perder dinheiro com projetos sem controle de tempo.' },
+        ].map((f, i) => {
+          const Icon = f.icon
+          return (
+            <div key={i} style={{
+              background: 'var(--bg)', border: '1px solid var(--b)',
+              borderRadius: 'var(--rad)', padding: 28,
+            }}>
+              <div style={{
+                width: 44, height: 44, background: 'var(--pl)', borderRadius: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 16,
+              }}><Icon size={20} color="var(--p)" /></div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{f.title}</h3>
+              <p style={{ fontSize: 14, color: 'var(--ts)', lineHeight: 1.6 }}>{f.desc}</p>
+            </div>
+          )
+        })}
       </div>
 
       {/* CTA FOOTER */}

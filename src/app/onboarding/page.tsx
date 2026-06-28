@@ -2,20 +2,21 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { Palette, Laptop, PenLine, Film, Megaphone, Zap, User, Users, Building2, Rocket } from 'lucide-react'
 
 const profissoes = [
-  { value: 'designer', icon: '🎨', title: 'Designer', sub: 'UI/UX, gráfico, motion' },
-  { value: 'dev', icon: '💻', title: 'Desenvolvedor', sub: 'Web, mobile, sistemas' },
-  { value: 'redator', icon: '✍️', title: 'Redator / Copy', sub: 'Conteúdo, SEO, social' },
-  { value: 'video', icon: '🎬', title: 'Vídeo / Foto', sub: 'Produção audiovisual' },
-  { value: 'marketing', icon: '📣', title: 'Marketing', sub: 'Tráfego, gestão de social' },
-  { value: 'outro', icon: '⚡', title: 'Outro', sub: 'Consultoria, gestão, etc' },
+  { value: 'designer',   icon: Palette,   title: 'Designer',          sub: 'UI/UX, gráfico, motion' },
+  { value: 'dev',        icon: Laptop,    title: 'Desenvolvedor',     sub: 'Web, mobile, sistemas' },
+  { value: 'redator',    icon: PenLine,   title: 'Redator / Copy',    sub: 'Conteúdo, SEO, social' },
+  { value: 'video',      icon: Film,      title: 'Vídeo / Foto',      sub: 'Produção audiovisual' },
+  { value: 'marketing',  icon: Megaphone, title: 'Marketing',         sub: 'Tráfego, gestão de social' },
+  { value: 'outro',      icon: Zap,       title: 'Outro',             sub: 'Consultoria, gestão, etc' },
 ]
 
 const tamanhos = [
-  { value: 'solo', icon: '🧑', title: 'Só eu', sub: 'Freelancer independente' },
-  { value: 'pequena', icon: '👥', title: 'Pequena equipe', sub: '2 a 5 pessoas' },
-  { value: 'media', icon: '🏢', title: 'Agência', sub: '6 ou mais pessoas' },
+  { value: 'solo',     icon: User,      title: 'Só eu',          sub: 'Freelancer independente' },
+  { value: 'pequena',  icon: Users,     title: 'Pequena equipe', sub: '2 a 5 pessoas' },
+  { value: 'media',    icon: Building2, title: 'Agência',        sub: '6 ou mais pessoas' },
 ]
 
 export default function OnboardingPage() {
@@ -44,7 +45,6 @@ export default function OnboardingPage() {
   }
 
   const steps = ['profissao', 'tamanho', 'meta', 'concluir']
-  const progress = ((step - 1) / steps.length) * 100
 
   return (
     <div style={{
@@ -73,18 +73,21 @@ export default function OnboardingPage() {
             <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Qual é a sua área?</h2>
             <p style={{ color: 'var(--ts)', fontSize: 14, marginBottom: 24 }}>Isso nos ajuda a personalizar sua experiência.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {profissoes.map(p => (
-                <div key={p.value}
-                  className={`radio-opt${profissao === p.value ? ' sel' : ''}`}
-                  onClick={() => { setProfissao(p.value); setTimeout(() => setStep(2), 350) }}
-                >
-                  <div style={{ fontSize: 22 }}>{p.icon}</div>
-                  <div>
-                    <div className="radio-label">{p.title}</div>
-                    <div className="radio-sub">{p.sub}</div>
+              {profissoes.map(p => {
+                const Icon = p.icon
+                return (
+                  <div key={p.value}
+                    className={`radio-opt${profissao === p.value ? ' sel' : ''}`}
+                    onClick={() => { setProfissao(p.value); setTimeout(() => setStep(2), 350) }}
+                  >
+                    <Icon size={22} color="var(--p)" />
+                    <div>
+                      <div className="radio-label">{p.title}</div>
+                      <div className="radio-sub">{p.sub}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </>
         )}
@@ -95,18 +98,21 @@ export default function OnboardingPage() {
             <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Como você trabalha?</h2>
             <p style={{ color: 'var(--ts)', fontSize: 14, marginBottom: 24 }}>Somos freelancers, duplas ou agências — sem julgamento.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {tamanhos.map(t => (
-                <div key={t.value}
-                  className={`radio-opt${tamanho === t.value ? ' sel' : ''}`}
-                  onClick={() => { setTamanho(t.value); setTimeout(() => setStep(3), 350) }}
-                >
-                  <div style={{ fontSize: 22 }}>{t.icon}</div>
-                  <div>
-                    <div className="radio-label">{t.title}</div>
-                    <div className="radio-sub">{t.sub}</div>
+              {tamanhos.map(t => {
+                const Icon = t.icon
+                return (
+                  <div key={t.value}
+                    className={`radio-opt${tamanho === t.value ? ' sel' : ''}`}
+                    onClick={() => { setTamanho(t.value); setTimeout(() => setStep(3), 350) }}
+                  >
+                    <Icon size={22} color="var(--p)" />
+                    <div>
+                      <div className="radio-label">{t.title}</div>
+                      <div className="radio-sub">{t.sub}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <button className="btn bg-btn btn-sm" style={{ marginTop: 16 }} onClick={() => setStep(1)}>← Voltar</button>
           </>
@@ -140,7 +146,9 @@ export default function OnboardingPage() {
         {/* Step 4 - Conclusão */}
         {step === 4 && (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🚀</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <Rocket size={48} color="var(--p)" strokeWidth={1.5} />
+            </div>
             <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Tudo pronto!</h2>
             <p style={{ color: 'var(--ts)', fontSize: 14, marginBottom: 32, lineHeight: 1.7 }}>
               Sua conta está configurada. Você pode criar seu primeiro projeto e começar a acompanhar seu trabalho agora mesmo.

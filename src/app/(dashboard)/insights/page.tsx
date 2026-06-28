@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import { fmtBRL } from '@/lib/types'
+import { BarChart2, Wallet, Timer, FolderOpen, Lightbulb, TrendingUp, AlertTriangle, Rocket } from 'lucide-react'
 
 export default async function InsightsPage() {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export default async function InsightsPage() {
 
   const [{ data: tasks }, { data: projects }, { data: transactions }, { data: timeEntries }] = await Promise.all([
     supabase.from('tasks').select('*').eq('user_id', user.id),
-    supabase.from('projects').select('*, client:clients(id, nome)').eq('user_id', user.id),
+    supabase.from('projects').select('*').eq('user_id', user.id),
     supabase.from('financial_transactions').select('*').eq('user_id', user.id),
     supabase.from('time_entries').select('*').eq('user_id', user.id),
   ])
@@ -61,7 +62,7 @@ export default async function InsightsPage() {
   const horasMes = te.filter(e => e.data?.startsWith(mesAtual)).reduce((s, e) => s + e.segundos, 0) / 3600
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700 }}>Insights</h1>
         <p style={{ color: 'var(--ts)', fontSize: 13 }}>Padrões do seu trabalho baseados em dados reais</p>
@@ -70,7 +71,7 @@ export default async function InsightsPage() {
       {/* Métricas gerais */}
       <div className="metrics-grid" style={{ marginBottom: 28 }}>
         <div className="metric-card">
-          <div className="metric-label">📊 Taxa de conclusão</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><BarChart2 size={13} /> Taxa de conclusão</div>
           <div className="metric-value">{taxaConclusao}%</div>
           <div className="progress-bar" style={{ marginTop: 8 }}>
             <div className="progress-fill" style={{ width: `${taxaConclusao}%` }} />
@@ -78,7 +79,7 @@ export default async function InsightsPage() {
           <div style={{ fontSize: 12, color: 'var(--ts)', marginTop: 6 }}>{concluidas} de {total} tarefas</div>
         </div>
         <div className="metric-card">
-          <div className="metric-label">💰 Receita este mês</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Wallet size={13} /> Receita este mês</div>
           <div className="metric-value" style={{ color: 'var(--g)' }}>{fmtBRL(recMes)}</div>
           {varReceita && (
             <div className={`metric-change ${parseInt(varReceita) >= 0 ? 'up' : 'down'}`}>
@@ -87,12 +88,12 @@ export default async function InsightsPage() {
           )}
         </div>
         <div className="metric-card">
-          <div className="metric-label">⏱ Horas este mês</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Timer size={13} /> Horas este mês</div>
           <div className="metric-value">{horasMes.toFixed(1)}h</div>
           <div style={{ fontSize: 12, color: 'var(--ts)' }}>{totalHoras.toFixed(1)}h registradas no total</div>
         </div>
         <div className="metric-card">
-          <div className="metric-label">📁 Projetos</div>
+          <div className="metric-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><FolderOpen size={13} /> Projetos</div>
           <div className="metric-value">{pAnd}</div>
           <div style={{ fontSize: 12, color: 'var(--ts)' }}>{pCon} concluídos · {p.length} total</div>
         </div>
@@ -126,8 +127,10 @@ export default async function InsightsPage() {
           <div className="card-header"><span className="card-title">Projetos por horas</span></div>
           <div className="card-body">
             {topProj.length === 0 ? (
-              <div className="empty-state" style={{ padding: '20px 0' }}>
-                <div>Nenhum registro de tempo ainda</div>
+              <div className="empty-state">
+                <div className="empty-state-icon"><Timer size={22} color="var(--o)" strokeWidth={1.5} /></div>
+                <div className="empty-state-title">Sem registros de tempo</div>
+                <div className="empty-state-sub">Use o timer nas tarefas para ver quais projetos consomem mais horas</div>
               </div>
             ) : (
               topProj.map((item, i) => (
@@ -151,12 +154,14 @@ export default async function InsightsPage() {
       {/* Rentabilidade */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="card-header">
-          <span className="card-title">💡 Rentabilidade por projeto (R$/hora)</span>
+          <span className="card-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Lightbulb size={14} /> Rentabilidade por projeto (R$/hora)</span>
         </div>
         <div className="card-body">
           {rentabilidade.length === 0 ? (
-            <div className="empty-state" style={{ padding: '20px 0' }}>
-              <div>Registre horas e valores nos projetos para ver a rentabilidade</div>
+            <div className="empty-state">
+              <div className="empty-state-icon"><TrendingUp size={22} color="var(--o)" strokeWidth={1.5} /></div>
+              <div className="empty-state-title">Sem dados de rentabilidade</div>
+              <div className="empty-state-sub">Defina o valor dos projetos e registre horas para ver o R$/hora de cada um</div>
             </div>
           ) : (
             <div className="table-wrap">
@@ -183,7 +188,7 @@ export default async function InsightsPage() {
                       </td>
                       <td>
                         <span className={`bdg ${pr.valorHora >= 100 ? 'bdg-g' : pr.valorHora >= 50 ? 'bdy' : 'bdr'}`}>
-                          {pr.valorHora >= 100 ? '🚀 Excelente' : pr.valorHora >= 50 ? '⚠️ Regular' : '🔴 Abaixo'}
+                          {pr.valorHora >= 100 ? 'Excelente' : pr.valorHora >= 50 ? 'Regular' : 'Abaixo'}
                         </span>
                       </td>
                     </tr>
@@ -199,7 +204,7 @@ export default async function InsightsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {recMes > recMesAnt && recMesAnt > 0 && (
           <div style={{ background: 'var(--s)', border: '1px solid var(--b)', borderRadius: 'var(--rad)', padding: '20px 22px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-            <div style={{ fontSize: 22 }}>📈</div>
+            <div style={{ flexShrink: 0 }}><TrendingUp size={22} color="var(--g)" /></div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--ts)', marginBottom: 4 }}>Crescimento</div>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Receita crescendo mês a mês</div>
@@ -211,7 +216,7 @@ export default async function InsightsPage() {
         )}
         {tAg > tAn + tCo && (
           <div style={{ background: 'var(--s)', border: '1px solid var(--b)', borderRadius: 'var(--rad)', padding: '20px 22px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-            <div style={{ fontSize: 22 }}>⚠️</div>
+            <div style={{ flexShrink: 0 }}><AlertTriangle size={22} color="var(--y)" /></div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--ts)', marginBottom: 4 }}>Atenção</div>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Muitas tarefas aguardando</div>
@@ -223,7 +228,7 @@ export default async function InsightsPage() {
         )}
         {totalHoras === 0 && (
           <div style={{ background: 'var(--s)', border: '1px solid var(--b)', borderRadius: 'var(--rad)', padding: '20px 22px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-            <div style={{ fontSize: 22 }}>💡</div>
+            <div style={{ flexShrink: 0 }}><Lightbulb size={22} color="var(--p)" /></div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--ts)', marginBottom: 4 }}>Dica</div>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Comece a registrar seu tempo</div>
